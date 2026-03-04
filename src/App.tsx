@@ -33,7 +33,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2">
-              <img src="/web images/tunia logo.png" alt="Little Tunia Designs" className="h-12 w-auto" />
+              <img src="public/web images/tunia logo.png" alt="Little Tunia Designs" className="h-12 w-auto" />
               <span className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                 Little Tunia Designs
               </span>
@@ -87,7 +87,7 @@ const App = () => {
         {/* Background border image */}
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
-          style={{ backgroundImage: "url('/web images/tunia background.png')" }}
+          style={{ backgroundImage: "url('public/web images/tunia background.png')" }}
         ></div>
         
         <div className="max-w-7xl mx-auto text-center relative z-10">
@@ -174,8 +174,8 @@ const App = () => {
             </div>
             <div className="order-1 md:order-2">
               <img 
-                src="/web images/About tunia.png" 
-                alt="About Tunia" 
+                src="public/web images/about tunia.png" 
+                alt="about tunia" 
                 className="w-full h-auto rounded-3xl shadow-lg"
               />
             </div>

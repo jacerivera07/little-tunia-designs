@@ -5,7 +5,7 @@ import { products, Product } from './data';
 import { ProductCard } from './components/ProductCard';
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 
 const App = () => {
   const [cartItems, setCartItems] = useState<Array<Product & { quantity: number }>>([]);
@@ -43,24 +43,32 @@ const App = () => {
       return;
     }
 
+    console.log('Loading orders for user:', user.uid);
+
     const ordersQuery = query(
       collection(db, 'orders'),
-      where('userId', '==', user.uid),
-      orderBy('date', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-      const userOrders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as typeof orders;
+      console.log('Orders snapshot received:', snapshot.docs.length, 'documents');
+      const userOrders = snapshot.docs.map(doc => {
+        console.log('Order document:', doc.id, doc.data());
+        return {
+          id: doc.id,
+          ...doc.data()
+        };
+      }) as typeof orders;
+      
+      // Sort by date in JavaScript instead of Firestore
+      userOrders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      console.log('Setting orders:', userOrders);
       setOrders(userOrders);
     }, (error) => {
       console.error('Error loading orders:', error);
-      // If it's an index error, we'll see it in console
-      if (error.code === 'failed-precondition') {
-        console.log('Index needed - check console for link to create it');
-      }
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
     });
 
     return () => unsubscribe();
@@ -770,6 +778,9 @@ const App = () => {
                     }
 
                     try {
+                      console.log('Creating order for user:', user.uid);
+                      console.log('Database instance:', db);
+                      
                       const newOrder = {
                         userId: user.uid,
                         userEmail: user.email,
@@ -786,14 +797,18 @@ const App = () => {
                         date: new Date().toISOString()
                       };
 
-                      await addDoc(collection(db, 'orders'), newOrder);
+                      console.log('Order data:', newOrder);
+                      const docRef = await addDoc(collection(db, 'orders'), newOrder);
+                      console.log('Order created successfully with ID:', docRef.id);
                       
                       setShowCheckout(false);
                       setShowOrderConfirmation(true);
                       setCartItems([]);
-                    } catch (error) {
+                    } catch (error: any) {
                       console.error('Error creating order:', error);
-                      alert('Failed to create order. Please try again.');
+                      console.error('Error code:', error.code);
+                      console.error('Error message:', error.message);
+                      alert(`Failed to create order: ${error.message}\n\nCheck console for details.`);
                     }
                   }}
                   className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg"

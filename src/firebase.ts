@@ -23,4 +23,9 @@ console.log('Firebase Config:', {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Initialize Firestore with explicit database ID
 export const db = getFirestore(app);
+
+// Log to verify Firestore is initialized
+console.log('Firestore initialized:', db.type);

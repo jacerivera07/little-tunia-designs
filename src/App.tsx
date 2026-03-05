@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { products, Product } from './data';
 import { ProductCard } from './components/ProductCard';
 import { auth, googleProvider } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithRedirect, signOut, onAuthStateChanged, User as FirebaseUser, getRedirectResult } from 'firebase/auth';
 
 const App = () => {
   const [cartItems, setCartItems] = useState<Array<Product & { quantity: number }>>([]);
@@ -30,22 +30,37 @@ const App = () => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
+    
+    // Check for redirect result
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // User successfully signed in
+          console.log('Sign in successful');
+        }
+      })
+      .catch((error) => {
+        console.error('Redirect error:', error);
+        if (error.code !== 'auth/cancelled-popup-request') {
+          alert('Login failed: ' + error.message);
+        }
+      });
+    
     return () => unsubscribe();
   }, []);
 
   const handleGoogleLogin = async () => {
-    if (isLoggingIn) return; // Prevent multiple clicks
+    if (isLoggingIn) return;
     
     try {
       setIsLoggingIn(true);
-      await signInWithPopup(auth, googleProvider);
+      // Use redirect instead of popup for better compatibility
+      await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
-      // Ignore cancelled popup errors (user closed popup)
-      if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
-        console.error('Login error:', error);
+      console.error('Login error:', error);
+      if (error.code !== 'auth/cancelled-popup-request') {
         alert('Login failed. Please try again.');
       }
-    } finally {
       setIsLoggingIn(false);
     }
   };

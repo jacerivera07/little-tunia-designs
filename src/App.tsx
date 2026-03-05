@@ -3,8 +3,9 @@ import { ShoppingBag, Star, Mail, Instagram, Facebook, BookOpen, Palette, Chevro
 import { motion, AnimatePresence } from 'framer-motion';
 import { products, Product } from './data';
 import { ProductCard } from './components/ProductCard';
-import { auth, googleProvider } from './firebase';
+import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { collection, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 const App = () => {
   const [cartItems, setCartItems] = useState<Array<Product & { quantity: number }>>([]);
@@ -34,6 +35,30 @@ const App = () => {
     
     return () => unsubscribe();
   }, []);
+
+  // Load user's orders from Firestore
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('userId', '==', user.uid),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+      const userOrders = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as typeof orders;
+      setOrders(userOrders);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
@@ -732,18 +757,38 @@ const App = () => {
                 </div>
 
                 <button
-                  onClick={() => {
-                    const newOrder = {
-                      id: Date.now().toString(),
-                      items: [...cartItems],
-                      total: cartTotal,
-                      status: 'pending' as const,
-                      date: new Date().toISOString()
-                    };
-                    setOrders(prev => [newOrder, ...prev]);
-                    setShowCheckout(false);
-                    setShowOrderConfirmation(true);
-                    setCartItems([]);
+                  onClick={async () => {
+                    if (!user) {
+                      alert('Please sign in to place an order');
+                      return;
+                    }
+
+                    try {
+                      const newOrder = {
+                        userId: user.uid,
+                        userEmail: user.email,
+                        userName: user.displayName,
+                        items: cartItems.map(item => ({
+                          id: item.id,
+                          title: item.title,
+                          price: item.price,
+                          quantity: item.quantity,
+                          image: item.image
+                        })),
+                        total: cartTotal,
+                        status: 'pending',
+                        date: new Date().toISOString()
+                      };
+
+                      await addDoc(collection(db, 'orders'), newOrder);
+                      
+                      setShowCheckout(false);
+                      setShowOrderConfirmation(true);
+                      setCartItems([]);
+                    } catch (error) {
+                      console.error('Error creating order:', error);
+                      alert('Failed to create order. Please try again.');
+                    }
                   }}
                   className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg"
                 >

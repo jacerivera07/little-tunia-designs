@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { products, Product } from './data';
 import { ProductCard } from './components/ProductCard';
 import { auth, googleProvider } from './firebase';
-import { signInWithRedirect, signOut, onAuthStateChanged, User as FirebaseUser, getRedirectResult } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 const App = () => {
   const [cartItems, setCartItems] = useState<Array<Product & { quantity: number }>>([]);
@@ -29,22 +29,8 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setIsLoggingIn(false);
     });
-    
-    // Check for redirect result
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          // User successfully signed in
-          console.log('Sign in successful');
-        }
-      })
-      .catch((error) => {
-        console.error('Redirect error:', error);
-        if (error.code !== 'auth/cancelled-popup-request') {
-          alert('Login failed: ' + error.message);
-        }
-      });
     
     return () => unsubscribe();
   }, []);
@@ -52,16 +38,23 @@ const App = () => {
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
     
+    setIsLoggingIn(true);
+    
     try {
-      setIsLoggingIn(true);
-      // Use redirect instead of popup for better compatibility
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
+      // Success - user will be set by onAuthStateChanged
     } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.code !== 'auth/cancelled-popup-request') {
-        alert('Login failed. Please try again.');
-      }
       setIsLoggingIn(false);
+      
+      // Only show error for real issues, not user cancellations
+      if (error.code === 'auth/popup-closed-by-user' || 
+          error.code === 'auth/cancelled-popup-request') {
+        console.log('Login cancelled by user');
+        return;
+      }
+      
+      console.error('Login error:', error);
+      alert(`Login failed: ${error.message}\n\nPlease make sure popups are enabled for this site.`);
     }
   };
 

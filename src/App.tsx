@@ -55,6 +55,12 @@ const App = () => {
         ...doc.data()
       })) as typeof orders;
       setOrders(userOrders);
+    }, (error) => {
+      console.error('Error loading orders:', error);
+      // If it's an index error, we'll see it in console
+      if (error.code === 'failed-precondition') {
+        console.log('Index needed - check console for link to create it');
+      }
     });
 
     return () => unsubscribe();

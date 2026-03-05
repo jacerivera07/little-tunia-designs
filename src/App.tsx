@@ -24,6 +24,7 @@ const App = () => {
   }>>([]);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -33,10 +34,19 @@ const App = () => {
   }, []);
 
   const handleGoogleLogin = async () => {
+    if (isLoggingIn) return; // Prevent multiple clicks
+    
     try {
+      setIsLoggingIn(true);
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      // Ignore cancelled popup errors (user closed popup)
+      if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
+        console.error('Login error:', error);
+        alert('Login failed. Please try again.');
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -169,10 +179,11 @@ const App = () => {
               ) : (
                 <button 
                   onClick={handleGoogleLogin}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-full font-medium text-gray-700 hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center gap-2"
+                  disabled={isLoggingIn}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-full font-medium text-gray-700 hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <User className="w-4 h-4" />
-                  Sign In
+                  {isLoggingIn ? 'Signing In...' : 'Sign In'}
                 </button>
               )}
             </div>

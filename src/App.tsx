@@ -87,7 +87,7 @@ const App = () => {
         {/* Background border image */}
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
-          style={{ backgroundImage: "url('public/web images/tunia background.png')" }}
+          style={{ backgroundImage: "url('public/Web images/tunia background.png')" }}
         ></div>
         
         <div className="max-w-7xl mx-auto text-center relative z-10">
@@ -174,7 +174,7 @@ const App = () => {
             </div>
             <div className="order-1 md:order-2">
               <img 
-                src="public/web images/about tunia.png" 
+                src="public/Web images/about tunia.png" 
                 alt="about tunia" 
                 className="w-full h-auto rounded-3xl shadow-lg"
               />
@@ -357,7 +357,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-6">
-              <img src="/web images/tunia logo.png" alt="Little Tunia Designs" className="h-10 w-auto" />
+              <img src="/Web images/tunia logo.png" alt="Little Tunia Designs" className="h-10 w-auto" />
               <span className="text-xl font-bold text-gray-900">Little Tunia Designs</span>
             </div>
             <p className="text-gray-500 max-w-sm mb-6 leading-relaxed">

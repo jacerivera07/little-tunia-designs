@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Mail, Instagram, Facebook, BookOpen, Palette, ChevronRight, Menu, X, Download, ShoppingCart, CheckCircle, User, LogOut, Plus, Minus, Trash2, CheckCircle2, Clock, Package } from 'lucide-react';
+import { ShoppingBag, Star, Mail, Facebook, BookOpen, Palette, ChevronRight, Menu, X, Download, ShoppingCart, CheckCircle, User, LogOut, Plus, Minus, Trash2, CheckCircle2, Clock, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { products, Product } from './data';
 import { ProductCard } from './components/ProductCard';
@@ -332,8 +332,8 @@ const App = () => {
             <div className="w-12 h-12 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center mb-4">
               <Star className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-lg mb-2">Loved by Parents</h3>
-            <p className="text-gray-500">Rated 5 stars by educators and parents around the world.</p>
+            <h3 className="font-bold text-lg mb-2">Quality Designs</h3>
+            <p className="text-gray-500">Thoughtfully crafted resources for learners and educators.</p>
           </div>
         </div>
       </section>
@@ -415,9 +415,14 @@ const App = () => {
           <p className="text-lg md:text-xl text-pink-50 mb-10 max-w-xl mx-auto relative z-10">
             I'm currently accepting new commissions for business cards, logo design, and social media branding. Let's create something together!
           </p>
-          <a href="mailto:hello@littletuniadesigns.com" className="bg-white text-pink-600 px-10 py-4 rounded-full font-bold text-lg hover:bg-pink-50 transition-colors inline-block relative z-10 shadow-xl">
-            Get a Free Quote
-          </a>
+          <div className="flex gap-4 justify-center relative z-10">
+            <a href="https://www.facebook.com/littletunia" target="_blank" rel="noopener noreferrer" className="w-14 h-14 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center transition-all hover:scale-110">
+              <Facebook className="w-7 h-7 text-white" />
+            </a>
+            <a href="mailto:hello@littletuniadesigns.com" className="w-14 h-14 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center transition-all hover:scale-110">
+              <Mail className="w-7 h-7 text-white" />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -1022,47 +1027,14 @@ const App = () => {
 
       {/* Footer */}
       <footer className="bg-gray-50 pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-6">
-              <img src="/Web%20images/tunia%20logo.png" alt="Little Tunia Designs" className="h-10 w-auto" />
-              <span className="text-xl font-bold text-gray-900">Little Tunia Designs</span>
-            </div>
-            <p className="text-gray-500 max-w-sm mb-6 leading-relaxed">
-              We create educational materials that spark joy and professional designs that build brands. Our mission is to make learning and business beautiful.
-            </p>
-            <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-pink-500 transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a href="https://www.facebook.com/littletunia" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-pink-500 transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-pink-500 transition-colors">
-                <Mail className="w-5 h-5" />
-              </a>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="flex items-center gap-2 mb-6 justify-center">
+            <img src="/Web%20images/tunia%20logo.png" alt="Little Tunia Designs" className="h-10 w-auto" />
+            <span className="text-xl font-bold text-gray-900">Little Tunia Designs</span>
           </div>
-          
-          <div>
-            <h4 className="font-bold text-gray-900 mb-6 uppercase text-sm tracking-widest">Resources</h4>
-            <ul className="space-y-4 text-gray-500">
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Printables Guide</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Education Blog</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Design Portfolio</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Free Worksheets</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-gray-900 mb-6 uppercase text-sm tracking-widest">Support</h4>
-            <ul className="space-y-4 text-gray-500">
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Refund Policy</a></li>
-              <li><a href="#" className="hover:text-pink-600 transition-colors">Contact Support</a></li>
-            </ul>
-          </div>
+          <p className="text-gray-500 mb-8 leading-relaxed max-w-2xl mx-auto">
+            We create educational materials that spark joy and professional designs that build brands. Our mission is to make learning and business beautiful.
+          </p>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 pt-10 border-t border-gray-200 text-center text-gray-400 text-sm">

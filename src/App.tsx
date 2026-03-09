@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Mail, Facebook, BookOpen, Palette, ChevronRight, Menu, X, Download, ShoppingCart, CheckCircle, User, LogOut, Plus, Minus, Trash2, CheckCircle2, Clock, Package } from 'lucide-react';
+import { ShoppingBag, Star, Mail, Facebook, BookOpen, Palette, ChevronRight, Menu, X, Download, ShoppingCart, CheckCircle, User, LogOut, Plus, Minus, Trash2, CheckCircle2, Clock, Package, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products, Product } from './data';
+import { products as staticProducts, Product } from './data';
 import { ProductCard } from './components/ProductCard';
+import { AdminDashboard } from './components/AdminDashboard';
+import { CustomerInfoModal } from './components/CustomerInfoModal';
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 const App = () => {
   const [cartItems, setCartItems] = useState<Array<Product & { quantity: number }>>([]);
@@ -26,13 +28,57 @@ const App = () => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState<any>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [paymentProof, setPaymentProof] = useState<string>('');
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+
+  // Check if user is admin
+  const isAdmin = user?.email === 'toasweetworld@gmail.com';
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
+
+      // Check if customer info exists for non-admin users
+      if (currentUser && currentUser.email !== 'toasweetworld@gmail.com') {
+        const customerDocRef = doc(db, 'customers', currentUser.uid);
+        const customerDoc = await getDoc(customerDocRef);
+        
+        if (customerDoc.exists()) {
+          setCustomerInfo(customerDoc.data());
+          setShowCustomerInfoModal(false);
+        } else {
+          // Show modal to collect customer info
+          setShowCustomerInfoModal(true);
+        }
+      }
     });
     
+    return () => unsubscribe();
+  }, []);
+
+  // Load products from Firestore
+  useEffect(() => {
+    const productsQuery = query(collection(db, 'products'));
+
+    const unsubscribe = onSnapshot(productsQuery, (snapshot) => {
+      const firestoreProducts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Product[];
+      
+      // If no products in Firestore, use static products as fallback
+      setProducts(firestoreProducts.length > 0 ? firestoreProducts : staticProducts);
+    }, (error) => {
+      console.error('Error loading products:', error);
+      // Fallback to static products on error
+      setProducts(staticProducts);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -101,8 +147,62 @@ const App = () => {
     try {
       await signOut(auth);
       setShowUserMenu(false);
+      setCustomerInfo(null);
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const handleSaveCustomerInfo = async (info: any) => {
+    if (!user) return;
+
+    try {
+      const customerDocRef = doc(db, 'customers', user.uid);
+      await setDoc(customerDocRef, {
+        ...info,
+        email: user.email,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      
+      setCustomerInfo(info);
+      setShowCustomerInfoModal(false);
+    } catch (error) {
+      console.error('Error saving customer info:', error);
+      alert('Failed to save information. Please try again.');
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+      alert('Order cancelled successfully');
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Failed to cancel order. Please try again.');
+    }
+  };
+
+  const handlePaymentProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file');
+        return;
+      }
+
+      setPaymentProofFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPaymentProof(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -150,6 +250,22 @@ const App = () => {
   const filteredProducts = activeCategory === 'All' 
     ? products 
     : products.filter(p => p.category === activeCategory);
+
+  // Auto-open admin dashboard for admin users
+  useEffect(() => {
+    if (isAdmin && !showAdminDashboard) {
+      setShowAdminDashboard(true);
+    }
+  }, [isAdmin]);
+
+  // If admin is logged in, show only the admin dashboard
+  if (isAdmin && showAdminDashboard) {
+    return (
+      <div className="min-h-screen bg-[#fffcfd]">
+        <AdminDashboard onClose={handleLogout} adminUser={user} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fffcfd] text-gray-800 font-sans">
@@ -203,6 +319,18 @@ const App = () => {
                         <p className="font-semibold text-gray-900">{user.displayName}</p>
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
+                      {isAdmin && (
+                        <button 
+                          onClick={() => {
+                            setShowAdminDashboard(true);
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-pink-600 font-semibold"
+                        >
+                          <Package className="w-4 h-4" />
+                          Admin Dashboard
+                        </button>
+                      )}
                       <button 
                         onClick={() => {
                           setShowProfile(true);
@@ -415,13 +543,18 @@ const App = () => {
           <p className="text-lg md:text-xl text-pink-50 mb-10 max-w-xl mx-auto relative z-10">
             I'm currently accepting new commissions for business cards, logo design, and social media branding. Let's create something together!
           </p>
-          <div className="flex gap-4 justify-center relative z-10">
-            <a href="https://www.facebook.com/littletunia" target="_blank" rel="noopener noreferrer" className="w-14 h-14 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center transition-all hover:scale-110">
-              <Facebook className="w-7 h-7 text-white" />
-            </a>
-            <a href="mailto:hello@littletuniadesigns.com" className="w-14 h-14 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center transition-all hover:scale-110">
-              <Mail className="w-7 h-7 text-white" />
-            </a>
+          <div className="relative z-10">
+            <p className="text-lg font-semibold mb-4">Contact me:</p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full">
+                <Facebook className="w-5 h-5 text-white" />
+                <span className="text-white font-medium">@littletunia</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full">
+                <Mail className="w-5 h-5 text-white" />
+                <span className="text-white font-medium">hello@littletuniadesigns.com</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -739,39 +872,46 @@ const App = () => {
                         <li>Open your GCash app</li>
                         <li>Send ₱{cartTotal.toFixed(2)} using the QR code or account details above</li>
                         <li>Take a screenshot of the payment confirmation</li>
-                        <li>Send the screenshot to our email or Facebook page</li>
-                        <li>Include your order details in the message</li>
                       </ol>
                     </div>
                   </div>
                 </div>
 
-                {/* Contact Information */}
+                {/* Payment Proof Upload */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Send Payment Proof To:</h3>
-                  <div className="space-y-3">
-                    <a
-                      href="mailto:hello@littletuniadesigns.com"
-                      className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <Mail className="w-5 h-5 text-pink-500" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Email</p>
-                        <p className="text-sm text-gray-600">hello@littletuniadesigns.com</p>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Upload Payment Proof</h3>
+                  <p className="text-sm text-gray-600 mb-4">Upload a screenshot of your GCash payment confirmation</p>
+                  
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-pink-400 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePaymentProofUpload}
+                      className="hidden"
+                      id="payment-proof-upload"
+                    />
+                    
+                    {paymentProof ? (
+                      <div className="space-y-3">
+                        <img src={paymentProof} alt="Payment Proof" className="max-h-64 mx-auto rounded-lg border-2 border-green-500" />
+                        <div className="flex items-center justify-center gap-2 text-green-600">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="font-semibold">Payment proof uploaded</span>
+                        </div>
+                        <label
+                          htmlFor="payment-proof-upload"
+                          className="inline-block px-4 py-2 text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
+                        >
+                          Change image
+                        </label>
                       </div>
-                    </a>
-                    <a
-                      href="https://www.facebook.com/littletunia"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <Facebook className="w-5 h-5 text-pink-500" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Facebook</p>
-                        <p className="text-sm text-gray-600">@littletuniadesigns</p>
-                      </div>
-                    </a>
+                    ) : (
+                      <label htmlFor="payment-proof-upload" className="cursor-pointer block">
+                        <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="text-lg font-semibold text-gray-700 mb-1">Click to upload payment proof</p>
+                        <p className="text-sm text-gray-500">PNG, JPG up to 10MB</p>
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -779,6 +919,20 @@ const App = () => {
                   onClick={async () => {
                     if (!user) {
                       alert('Please sign in to place an order');
+                      return;
+                    }
+
+                    // Check if customer info exists
+                    if (!customerInfo || !customerInfo.fullName || !customerInfo.address) {
+                      alert('Please complete your profile information first');
+                      setShowCheckout(false);
+                      setShowCustomerInfoModal(true);
+                      return;
+                    }
+
+                    // Check if payment proof is uploaded
+                    if (!paymentProof) {
+                      alert('Please upload your payment proof before submitting the order');
                       return;
                     }
 
@@ -790,6 +944,9 @@ const App = () => {
                         userId: user.uid,
                         userEmail: user.email,
                         userName: user.displayName,
+                        customerInfo: customerInfo,
+                        paymentProof: paymentProof,
+                        paymentProofFileName: paymentProofFile?.name || 'payment-proof.jpg',
                         items: cartItems.map(item => ({
                           id: item.id,
                           title: item.title,
@@ -809,6 +966,8 @@ const App = () => {
                       setShowCheckout(false);
                       setShowOrderConfirmation(true);
                       setCartItems([]);
+                      setPaymentProof('');
+                      setPaymentProofFile(null);
                     } catch (error: any) {
                       console.error('Error creating order:', error);
                       console.error('Error code:', error.code);
@@ -816,9 +975,14 @@ const App = () => {
                       alert(`Failed to create order: ${error.message}\n\nCheck console for details.`);
                     }
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg"
+                  disabled={!paymentProof}
+                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${
+                    paymentProof
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
-                  I've Sent the Payment
+                  {paymentProof ? 'Submit Order' : 'Upload Payment Proof First'}
                 </button>
               </div>
             </motion.div>
@@ -936,10 +1100,20 @@ const App = () => {
                         </div>
 
                         {order.status === 'pending' && (
-                          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
-                            <p className="text-xs text-yellow-800">
-                              ⏳ Waiting for payment confirmation. We'll notify you once verified.
-                            </p>
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex-1 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
+                              <p className="text-xs text-yellow-800">
+                                ⏳ Waiting for payment confirmation
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => handleCancelOrder(order.id)}
+                              className="ml-3 px-3 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                              title="Cancel order"
+                            >
+                              <X className="w-3 h-3" />
+                              Cancel
+                            </button>
                           </div>
                         )}
 
@@ -1041,6 +1215,14 @@ const App = () => {
           <p>© {new Date().getFullYear()} Little Tunia Designs. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Customer Info Modal */}
+      {showCustomerInfoModal && user && !isAdmin && (
+        <CustomerInfoModal 
+          onSave={handleSaveCustomerInfo}
+          initialData={customerInfo}
+        />
+      )}
     </div>
   );
 };
